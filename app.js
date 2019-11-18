@@ -161,7 +161,32 @@ var UIcontroller = (function() {
     expenseLable: '.budget__expenses--value',
     percentageLable: '.budget__expenses--percentage',
     container: '.container',
-    expensePercLabel: '.item__percentage'
+    expensePercLabel: '.item__percentage',
+    dateLabel: '.budget__title--month'
+  }
+
+  var formatNumber = function(num, type){
+    var numSplit, int;
+
+    num = Math.abs(num); // doesn't have decimal 2356
+    num = num.toFixed(2); // over writing num, giving two degit of decimal 2356.00
+
+    numSplit = num.split('.') // 2356(absolute num) and 00(decimal)
+
+    int = numSplit[0] // 2356
+    if(int.length > 3) {
+      int = int.substr(0, int.length -3) + ',' + int.substr(int.length - 3, 3);
+    }
+
+    dec = numSplit[1] // 00
+
+    return (type === 'exp' ? '-' : '+') + ' ' + int + '.' +dec;
+  }
+
+  var nodeListForEach = function(list, callback) {
+    for(let i=0; i < list.length; i++){
+      callback(list[i], i)
+    }
   }
 
 
@@ -192,7 +217,7 @@ var UIcontroller = (function() {
       // Replace the placeholder text with actual data
       newHtml = html.replace('%id%', obj.id);
       newHtml = newHtml.replace('%description%', obj.description);
-      newHtml = newHtml.replace('%value%', obj.value);
+      newHtml = newHtml.replace('%value%', formatNumber(obj.value, type));
 
 
       // Insert the HTML into the DOM
@@ -222,9 +247,13 @@ var UIcontroller = (function() {
     },
 
     displayBudget: function(obj) {
-      document.querySelector(DOMstrings.budgetLabel).textContent = obj.budget;
-      document.querySelector(DOMstrings.incomeLable).textContent = obj.totalInc;
-      document.querySelector(DOMstrings.expenseLable).textContent = obj.totalExp;
+      var type;
+
+      obj.budget > 0 ? type = 'inc' : type = 'exp';
+
+      document.querySelector(DOMstrings.budgetLabel).textContent = formatNumber(obj.budget, type);
+      document.querySelector(DOMstrings.incomeLable).textContent = formatNumber(obj.totalInc, 'inc');
+      document.querySelector(DOMstrings.expenseLable).textContent = formatNumber(obj.totalExp, 'exp');
 
       if(obj.percentage > 0) {
         document.querySelector(DOMstrings.percentageLable).textContent = obj.percentage + '%'
@@ -237,11 +266,6 @@ var UIcontroller = (function() {
 
     displayPercentage: function(percentages) {
       var field = document.querySelectorAll(DOMstrings.expensePercLabel);
-      var nodeListForEach = function(list, callback) {
-        for(let i=0; i < list.length; i++){
-          callback(list[i], i)
-        }
-      }
 
       nodeListForEach(field, function(current, index) {
         if(percentages[index] > 0){
@@ -251,6 +275,34 @@ var UIcontroller = (function() {
           current.textContent = '---';
         }
       });
+    },
+
+    displayMonth: function() {
+      var now, month, year;
+
+      now = new Date();
+
+      months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+      month = now.getMonth();
+
+      year = now.getFullYear();
+
+      document.querySelector(DOMstrings.dateLabel).textContent = months[month] + ' ' + year;
+
+    },
+
+    changedType: function() {
+      var fields = document.querySelectorAll(
+        DOMstrings.inputType + ',' +
+        DOMstrings.inputDescription + ',' +
+        DOMstrings.inputValue
+      )
+
+      nodeListForEach(fields, function(cur) {
+        cur.classList.toggle('red-focus');
+      });
+
+      document.querySelector(DOMstrings.inputBtn).classList.toggle('red');
     },
 
     getDOMstrings: function() {
@@ -280,6 +332,8 @@ var controller = (function(budgetctrl, UIctrl) {
       });
 
       document.querySelector(DOM.container).addEventListener('click', ctrlDeleteItem);
+
+      document.querySelector(DOM.inputType).addEventListener('change', UIctrl.changedType);
   };
 
   var updateBudget = function() {
@@ -359,6 +413,7 @@ var controller = (function(budgetctrl, UIctrl) {
   return {
     init: function() {
       console.log('Application is working!')
+      UIctrl.displayMonth();
       UIctrl.displayBudget({
         totalInc: 0,
         totalExp: 0,
